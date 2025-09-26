@@ -14,10 +14,5 @@
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "functions": {
-    "index_quiz_educativo.js": {
-      "maxDuration": 30
-    }
   }
 }
