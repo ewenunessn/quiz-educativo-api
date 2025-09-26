@@ -361,33 +361,32 @@ app.get('/api/quiz/:id/stats', async (req, res) => {
 
 // ==================== ROTAS DE CONFIGURAÇÃO DO APP ====================
 
-// Obter configurações do app (apenas cores)
+// Obter nome do app
 app.get('/api/app-settings', async (req, res) => {
   try {
-    const result = await pool.query('SELECT primary_color, secondary_color FROM app_settings ORDER BY id DESC LIMIT 1');
+    const result = await pool.query('SELECT app_name FROM app_settings ORDER BY id DESC LIMIT 1');
     
     if (result.rows.length === 0) {
-      // Retornar cores padrão se não houver nenhuma
+      // Retornar nome padrão se não houver nenhuma configuração
       return res.json({
-        primary_color: '#4CAF50',
-        secondary_color: '#45a049'
+        app_name: 'Quiz Educativo'
       });
     }
 
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Erro ao buscar configurações:', error);
-    res.status(500).json({ error: 'Erro ao buscar configurações do app' });
+    console.error('Erro ao buscar nome do app:', error);
+    res.status(500).json({ error: 'Erro ao buscar nome do app' });
   }
 });
 
-// Atualizar cores do app (apenas para administração direta no banco)
+// Atualizar nome do app (apenas para administração direta no banco)
 app.put('/api/app-settings', async (req, res) => {
   try {
-    const { primaryColor, secondaryColor } = req.body;
+    const { appName } = req.body;
     
-    if (!primaryColor || !secondaryColor) {
-      return res.status(400).json({ error: 'Cores primária e secundária são obrigatórias' });
+    if (!appName) {
+      return res.status(400).json({ error: 'Nome do app é obrigatório' });
     }
 
     // Verificar se já existe uma configuração
@@ -395,23 +394,23 @@ app.put('/api/app-settings', async (req, res) => {
     
     let result;
     if (existingResult.rows.length > 0) {
-      // Atualizar cores existentes
+      // Atualizar nome existente
       result = await pool.query(
-        'UPDATE app_settings SET primary_color = $1, secondary_color = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING primary_color, secondary_color',
-        [primaryColor, secondaryColor, existingResult.rows[0].id]
+        'UPDATE app_settings SET app_name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING app_name',
+        [appName, existingResult.rows[0].id]
       );
     } else {
-      // Criar nova configuração com cores
+      // Criar nova configuração com nome
       result = await pool.query(
-        'INSERT INTO app_settings (primary_color, secondary_color) VALUES ($1, $2) RETURNING primary_color, secondary_color',
-        [primaryColor, secondaryColor]
+        'INSERT INTO app_settings (app_name) VALUES ($1) RETURNING app_name',
+        [appName]
       );
     }
 
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Erro ao atualizar cores:', error);
-    res.status(500).json({ error: 'Erro ao atualizar cores do app' });
+    console.error('Erro ao atualizar nome do app:', error);
+    res.status(500).json({ error: 'Erro ao atualizar nome do app' });
   }
 });
 
