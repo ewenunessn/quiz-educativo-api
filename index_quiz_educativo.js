@@ -361,19 +361,16 @@ app.get('/api/quiz/:id/stats', async (req, res) => {
 
 // ==================== ROTAS DE CONFIGURAÇÃO DO APP ====================
 
-// Obter configurações do app
+// Obter configurações do app (apenas cores)
 app.get('/api/app-settings', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM app_settings ORDER BY id DESC LIMIT 1');
+    const result = await pool.query('SELECT primary_color, secondary_color FROM app_settings ORDER BY id DESC LIMIT 1');
     
     if (result.rows.length === 0) {
-      // Retornar configurações padrão se não houver nenhuma
+      // Retornar cores padrão se não houver nenhuma
       return res.json({
-        app_name: 'Quiz App',
-        app_icon: '🎯',
-        app_description: 'Teste seus conhecimentos!',
-        primary_color: '#FFD700',
-        secondary_color: '#FFA500'
+        primary_color: '#4CAF50',
+        secondary_color: '#45a049'
       });
     }
 
@@ -384,13 +381,13 @@ app.get('/api/app-settings', async (req, res) => {
   }
 });
 
-// Atualizar configurações do app
+// Atualizar cores do app (apenas para administração direta no banco)
 app.put('/api/app-settings', async (req, res) => {
   try {
-    const { appName, appIcon, appDescription, primaryColor, secondaryColor } = req.body;
+    const { primaryColor, secondaryColor } = req.body;
     
-    if (!appName || !appIcon) {
-      return res.status(400).json({ error: 'Nome e ícone do app são obrigatórios' });
+    if (!primaryColor || !secondaryColor) {
+      return res.status(400).json({ error: 'Cores primária e secundária são obrigatórias' });
     }
 
     // Verificar se já existe uma configuração
@@ -398,23 +395,23 @@ app.put('/api/app-settings', async (req, res) => {
     
     let result;
     if (existingResult.rows.length > 0) {
-      // Atualizar configuração existente
+      // Atualizar cores existentes
       result = await pool.query(
-        'UPDATE app_settings SET app_name = $1, app_icon = $2, app_description = $3, primary_color = $4, secondary_color = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
-        [appName, appIcon, appDescription || 'Teste seus conhecimentos!', primaryColor || '#FFD700', secondaryColor || '#FFA500', existingResult.rows[0].id]
+        'UPDATE app_settings SET primary_color = $1, secondary_color = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING primary_color, secondary_color',
+        [primaryColor, secondaryColor, existingResult.rows[0].id]
       );
     } else {
-      // Criar nova configuração
+      // Criar nova configuração com cores
       result = await pool.query(
-        'INSERT INTO app_settings (app_name, app_icon, app_description, primary_color, secondary_color) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [appName, appIcon, appDescription || 'Teste seus conhecimentos!', primaryColor || '#FFD700', secondaryColor || '#FFA500']
+        'INSERT INTO app_settings (primary_color, secondary_color) VALUES ($1, $2) RETURNING primary_color, secondary_color',
+        [primaryColor, secondaryColor]
       );
     }
 
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Erro ao atualizar configurações:', error);
-    res.status(500).json({ error: 'Erro ao atualizar configurações do app' });
+    console.error('Erro ao atualizar cores:', error);
+    res.status(500).json({ error: 'Erro ao atualizar cores do app' });
   }
 });
 
