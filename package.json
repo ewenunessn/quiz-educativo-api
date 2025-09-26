@@ -1,0 +1,35 @@
+{
+  "name": "quiz-educativo-server",
+  "version": "2.0.0",
+  "description": "Backend do Sistema de Quiz Educativo",
+  "main": "index_quiz_educativo.js",
+  "scripts": {
+    "start": "node index_quiz_educativo.js",
+    "dev": "nodemon index_quiz_educativo.js",
+    "build": "echo 'Build completed'",
+    "deploy": "node deploy.js",
+    "migrate": "node migrate_to_quiz_educativo.js",
+    "old": "node index.js",
+    "setup": "node setup.js",
+    "init": "npm run migrate && npm start",
+    "test": "echo \"Sistema de Quiz Educativo - Testes em desenvolvimento\" && exit 0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "quiz",
+    "educativo",
+    "nodejs",
+    "postgresql",
+    "api"
+  ],
+  "author": "Quiz Educativo Team",
+  "license": "MIT"
+}
