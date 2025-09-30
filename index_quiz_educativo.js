@@ -13,7 +13,10 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'quiz_app',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'admin123',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // Neon sempre exige SSL, mesmo em desenvolvimento
+  ssl: process.env.DB_HOST && process.env.DB_HOST.includes('neon.tech') 
+    ? { rejectUnauthorized: false } 
+    : process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
 // Middleware - Configuração CORS
@@ -411,6 +414,77 @@ app.put('/api/app-settings', async (req, res) => {
   } catch (error) {
     console.error('Erro ao atualizar nome do app:', error);
     res.status(500).json({ error: 'Erro ao atualizar nome do app' });
+  }
+});
+
+// ==================== ROTAS DE QUIZ PRINCIPAL ====================
+
+// Obter quiz principal
+app.get('/api/main-quiz', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT q.*, u.name as creator_name 
+      FROM quizzes q
+      LEFT JOIN users u ON q.created_by = u.id
+      WHERE q.is_main_quiz = true AND q.is_active = true
+      ORDER BY q.updated_at DESC
+      LIMIT 1
+    `);
+    
+    if (result.rows.length === 0) {
+      return res.json(null);
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Erro ao buscar quiz principal:', error);
+    res.status(500).json({ error: 'Erro ao buscar quiz principal' });
+  }
+});
+
+// Definir quiz principal
+app.put('/api/quiz/:id/set-main', async (req, res) => {
+  try {
+    const quizId = req.params.id;
+    
+    // Verificar se o quiz existe e está ativo
+    const quizCheck = await pool.query(
+      'SELECT id FROM quizzes WHERE id = $1 AND is_active = true',
+      [quizId]
+    );
+    
+    if (quizCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Quiz não encontrado ou inativo' });
+    }
+    
+    // Remover flag de principal de todos os outros quizzes
+    await pool.query('UPDATE quizzes SET is_main_quiz = false');
+    
+    // Definir este quiz como principal
+    const result = await pool.query(
+      'UPDATE quizzes SET is_main_quiz = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+      [quizId]
+    );
+    
+    res.json({ 
+      message: 'Quiz definido como principal com sucesso',
+      quiz: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Erro ao definir quiz principal:', error);
+    res.status(500).json({ error: 'Erro ao definir quiz principal' });
+  }
+});
+
+// Remover quiz principal (nenhum quiz será principal)
+app.delete('/api/main-quiz', async (req, res) => {
+  try {
+    await pool.query('UPDATE quizzes SET is_main_quiz = false');
+    
+    res.json({ message: 'Quiz principal removido com sucesso' });
+  } catch (error) {
+    console.error('Erro ao remover quiz principal:', error);
+    res.status(500).json({ error: 'Erro ao remover quiz principal' });
   }
 });
 

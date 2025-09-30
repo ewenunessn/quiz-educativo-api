@@ -4,9 +4,13 @@ require('dotenv').config();
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 5432,
-  database: 'quiz_app',
+  database: process.env.DB_NAME || 'quiz_app',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'admin123',
+  // Neon sempre exige SSL
+  ssl: process.env.DB_HOST && process.env.DB_HOST.includes('neon.tech') 
+    ? { rejectUnauthorized: false } 
+    : false,
 });
 
 async function simpleMigrate() {
@@ -40,13 +44,14 @@ async function simpleMigrate() {
     
     // Criar tabela app_settings
     await client.query(`
-      CREATE TABLE app_settings (
+      CREATE TABLE IF NOT EXISTS app_settings (
         id SERIAL PRIMARY KEY,
         app_name VARCHAR(100) NOT NULL DEFAULT 'Quiz App',
         app_icon VARCHAR(10) NOT NULL DEFAULT '🎯',
         app_description TEXT DEFAULT 'Teste seus conhecimentos!',
         primary_color VARCHAR(7) DEFAULT '#FFD700',
         secondary_color VARCHAR(7) DEFAULT '#FFA500',
+        main_quiz_id INTEGER REFERENCES quizzes(id) ON DELETE SET NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -54,13 +59,14 @@ async function simpleMigrate() {
 
     // Criar tabela quizzes
     await client.query(`
-      CREATE TABLE quizzes (
+      CREATE TABLE IF NOT EXISTS quizzes (
         id SERIAL PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
         description TEXT NOT NULL,
         reward_message TEXT NOT NULL,
         created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
         is_active BOOLEAN DEFAULT true,
+        is_main_quiz BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -68,7 +74,7 @@ async function simpleMigrate() {
     
     // Criar tabela quiz_questions
     await client.query(`
-      CREATE TABLE quiz_questions (
+      CREATE TABLE IF NOT EXISTS quiz_questions (
         id SERIAL PRIMARY KEY,
         quiz_id INTEGER REFERENCES quizzes(id) ON DELETE CASCADE,
         question TEXT NOT NULL,
@@ -85,7 +91,7 @@ async function simpleMigrate() {
     
     // Criar tabela alternatives para múltipla escolha
     await client.query(`
-      CREATE TABLE question_alternatives (
+      CREATE TABLE IF NOT EXISTS question_alternatives (
         id SERIAL PRIMARY KEY,
         question_id INTEGER REFERENCES quiz_questions(id) ON DELETE CASCADE,
         alternative_text TEXT NOT NULL,
@@ -96,7 +102,7 @@ async function simpleMigrate() {
     
     // Criar tabela quiz_results
     await client.query(`
-      CREATE TABLE quiz_results (
+      CREATE TABLE IF NOT EXISTS quiz_results (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         quiz_id INTEGER REFERENCES quizzes(id) ON DELETE CASCADE,
